@@ -1,0 +1,12 @@
+{
+    "name": "soundvault",
+    "version": "1.0.0",
+    "scripts": {
+        "dev": "concurrently \"npm run dev --prefix client\" \"npm start --prefix server\"",
+        "client": "npm run dev --prefix client",
+        "server": "npm start --prefix server"
+    },
+    "dependencies": {
+        "concurrently": "^10.0.5"
+    }
+}
