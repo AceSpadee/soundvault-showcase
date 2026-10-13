@@ -18,7 +18,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
         async function handleAutoPlay() {
             try {
                 await audioRef.current.play();
-            } catch (error) {
+            } catch {
                 handleAudioError();
             }
         }
@@ -44,7 +44,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
                 await audioRef.current.play();
                 setPlaybackError('');
             }
-        } catch (error) {
+        } catch {
             handleAudioError();
         }
     };

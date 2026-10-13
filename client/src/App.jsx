@@ -42,7 +42,7 @@ export default function App() {
 
                 const userData = await response.json();
                 setUser(userData);
-            } catch (error) {
+            } catch {
                 setUser(null)
             } finally {
                 setIsUserLoading(false);
