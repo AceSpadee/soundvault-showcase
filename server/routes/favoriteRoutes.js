@@ -91,8 +91,9 @@ router.post('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
     try {
         const favoriteId = req.params.id
-        const favorite = await Favorite.findByPk(favoriteId, {
+        const favorite = await Favorite.findOne({
             where: {
+                id: favoriteId,
                 user_id: req.user.id
             },
             include: [
