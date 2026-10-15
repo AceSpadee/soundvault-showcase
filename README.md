@@ -1,72 +1,85 @@
 # SoundVault Showcase
 
-A fully functional showcase version of SoundVault, a music library and
-streaming application built with React, Node.js, Express, and PostgreSQL.
+A public portfolio demonstration of SoundVault, a music library and streaming application built with React and JavaScript.
 
-This project is intentionally smaller than the private version of SoundVault
-and is designed to demonstrate the application's core functionality in a
-public environment.
+This showcase is a smaller, independent version of the private SoundVault project, designed to demonstrate frontend development, backend APIs, database operations, and music playback.
 
 ## Live Demo
 
-[View the live demo](#)
+Coming soon — Cloudflare deployment in progress.
 
-## Features
+## Planned Demo Features
 
-- User authentication
-- Music library browsing
-- Audio playback
-- Playback controls
-- Queue management
-- Favorites
-- Playlist creation and management
-- User-specific data and authorization
-- Library and recording management
+- Browse and search a small music library
+- Play real sample audio recordings
+- Playback controls and queue management
+- Favorite and unfavorite recordings
+- Create, edit, and delete playlists
+- Isolated demo sessions for each visitor
+- Persistent demo data across page refreshes
+- Reset Demo functionality
+- Backend API requests and database CRUD operations
 
-## Technology
+The showcase will contain approximately 5–10 sample recordings and will not require visitors to register personal accounts.
+
+## Technology Stack
 
 ### Frontend
-
 - React
 - Vite
 - JavaScript
 - CSS
 
 ### Backend
+- Cloudflare Workers
+- Node.js / Express (existing implementation being adapted)
+- REST APIs
 
-- Node.js
-- Express
-- Sequelize
-- PostgreSQL
+### Database
+- Cloudflare D1 (planned)
+- SQLite-based relational data
 
-### Planned Public Infrastructure
+### Hosting and Deployment
+- Cloudflare Free
+- Cloudflare Static Assets
+- GitHub Actions (planned CI/CD)
 
-- Cloudflare
-- Cloudflare D1
-- Cloudflare R2
-- GitHub Actions
+## Demo Architecture
 
-## About This Project
+The public application will use a small shared library of sample recordings and temporary, isolated visitor sessions.
 
-SoundVault is a personal music platform designed to provide a
-self-hosted alternative for managing and listening to a personal music
-library.
+Visitor-specific data, such as favorites and playlists, will be stored in Cloudflare D1. Visitors will be able to reset their demo session without affecting other users.
 
-This repository contains a smaller public implementation intended to
-demonstrate the application's functionality.
+Sample audio files will be hosted as static assets and will support actual playback.
 
-The full private SoundVault project contains additional functionality,
-infrastructure, and future development that is intentionally not included
-in this public version.
+The application is designed to operate entirely within Cloudflare's free-tier limits. To maintain a $0 hosting cost, the demo will use limited data, controlled resource usage, and no paid infrastructure.
 
-The public application is completely independent from the private
-SoundVault installation and does not have access to its music library,
-database, infrastructure, or credentials.
+## Relationship to Private SoundVault
 
-## Development
+The full private SoundVault application uses React, Node.js, Express, PostgreSQL, and Sequelize.
 
-Clone the repository and install the dependencies:
+It includes additional functionality such as local music library scanning, importing recordings, metadata matching, authentication, and user-specific music management.
 
-```bash
-git clone <repository-url>
-cd soundvault-showcase
+The public showcase is completely independent of the private installation and does not access its database, music library, infrastructure, or credentials.
+
+## Development Status
+
+**Current phase: Cloudflare Workers foundation completed; D1 migration pending.**
+
+- [x] Establish independent public showcase repository
+- [x] Initialize Cloudflare Workers backend
+- [x] Test initial authentication and API connectivity
+- [ ] Integrate Cloudflare D1
+- [ ] Implement isolated visitor sessions
+- [ ] Add demo library and playable sample audio
+- [ ] Implement public demo functionality
+- [ ] Add Reset Demo feature
+- [ ] Complete security and functionality testing
+- [ ] Configure GitHub Actions CI/CD
+- [ ] Deploy and verify live demo
+
+## Project Goals
+
+This showcase is intended to demonstrate practical full-stack development while providing a publicly accessible example of SoundVault.
+
+The full private application remains the primary project, with selected improvements adapted into the public showcase over time.
