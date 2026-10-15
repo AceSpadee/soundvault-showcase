@@ -1,26 +1,29 @@
 {
-    // The unique name of your Cloudflare Worker
-    "name": "my-cloudflare-worker",
-
-    // The entry point file for your application
-    "main": "worker.js",
-
-    // The date defining the runtime compatibility behavior
-    "compatibility_date": "2026-10-13",
-
-    // Opt-in flags for experimental or specific platform capabilities
-    "compatibility_flags": [
-        "nodejs_compat"
-    ],
-
-    "ratelimits": [
-        {
-            "name": "LOGIN_RATE_LIMITER",
-            "namespace_id": "1001",
-            "simple": {
-                "limit": 10,
-                "period": 60
-            }
-        }
-    ]
+	// The unique name of your Cloudflare Worker
+	"name": "my-cloudflare-worker",
+	// The entry point file for your application
+	"main": "worker.js",
+	// The date defining the runtime compatibility behavior
+	"compatibility_date": "2026-10-13",
+	// Opt-in flags for experimental or specific platform capabilities
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"ratelimits": [
+		{
+			"name": "LOGIN_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "soundvaultpublic_db",
+			"database_name": "soundvaultpublic_db",
+			"database_id": "1bb5617c-7c9c-4fed-83ab-0fef206d7638"
+		}
+	]
 }
