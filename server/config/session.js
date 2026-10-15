@@ -13,11 +13,15 @@ const pgPool = new pg.Pool({
     port: process.env.DB_PORT,
 });
 
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    throw new Error('missing production session secret')
+}
+
 const sessionMiddleware = session({
     store: new PgSession({
         pool: pgPool,
         tableName: 'session',
-        createTableIfMissing: true,
+        createTableIfMissing: false,
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,

@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 async function hashPassword(plainTextPassword) {
     const saltRounds = 12; 

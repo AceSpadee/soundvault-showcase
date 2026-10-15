@@ -1,6 +1,7 @@
 import express from 'express';
 import authenticateUser from '../services/authService.js';
 import requireAuth from '../middleware/requireAuth.js';
+import { env } from 'cloudflare:workers';
 
 const router = express.Router();
 
@@ -11,6 +12,18 @@ router.post('/login', async (req, res) => {
         if (typeof email !== 'string' || email.trim() === '') {
             return res.status(400).json({
                 message: 'Email cannot be blank'
+            });
+        }
+
+        const loginKey = `login:${email.trim().toLowerCase()}`;
+
+        const { success } = await env.LOGIN_RATE_LIMITER.limit({
+            key: loginKey
+        });
+
+        if (!success) {
+            return res.status(429).json({
+                message: 'Too many login attempts, please try again later.'
             });
         }
 
@@ -30,6 +43,8 @@ router.post('/login', async (req, res) => {
 
         req.session.regenerate((error) => {
             if (error) {
+                console.error('Session regenerate error:', error);
+                
                 return res.status(500).json({
                     message: 'Unable to log in'
                 });
@@ -39,6 +54,8 @@ router.post('/login', async (req, res) => {
 
             req.session.save((error) => {
                 if (error) {
+                    console.error('Session save error:', error);
+
                     return res.status(500).json({
                         message: 'Unable to log in'
                     });

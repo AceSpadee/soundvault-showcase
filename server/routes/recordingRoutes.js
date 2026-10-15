@@ -2,8 +2,7 @@ import express from 'express';
 import Recording from '../models/Recording.js';
 import Song from '../models/Song.js';
 import AudioFile from '../models/AudioFile.js';
-import { ForeignKeyConstraintError, UniqueConstraintError } from 'sequelize';
-import { serverError, foreignKeyError, uniqueError } from '../helpers/errorHelpers.js';
+import { serverError } from '../helpers/errorHelpers.js';
 import requireAuth from '../middleware/requireAuth.js';
 import { stat, realpath } from 'node:fs/promises';
 import LibraryRoot from '../models/LibraryRoot.js';
@@ -23,52 +22,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
-    try {
-        const { song_id, version, musicbrainz_id } = req.body;
-
-        if (!song_id) {
-            return res.status(400).json({
-                message: 'missing song id'
-            })
-        }
-        let recording = {
-            song_id
-        }
-        if (version !== undefined) {
-            if (version.trim() === '') {
-                return res.status(400).json({
-                    message: 'version provided cannot be blank'
-                })
-            }
-            const newVersion = version.trim();
-
-            recording.version = newVersion
-        }
-        if (musicbrainz_id !== undefined) {
-            if (musicbrainz_id.trim() === '') {
-                recording.musicbrainz_id = null
-            } else { 
-                recording.musicbrainz_id = musicbrainz_id.trim();
-            }
-        }
-
-        const builtRecording = await Recording.create(
-            recording
-        )
-
-        res.status(201).json(builtRecording);
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        } else if (error instanceof UniqueConstraintError) {
-            return uniqueError(res, error);
-        }
-
-        serverError(res, error);
-    }
-});
-
 router.get('/:id', async (req, res) => {
     try {
         const recordId = req.params.id;
@@ -84,85 +37,6 @@ router.get('/:id', async (req, res) => {
 
         res.status(200).json(recording);
     } catch (error) {
-        serverError(res, error);
-    }
-});
-
-router.put('/:id', async (req, res) => {
-    try {
-        const recordId = req.params.id;
-        const { song_id, version, musicbrainz_id } = req.body
-
-        const record = await Recording.findByPk(recordId);
-        if (!record) {
-            return res.status(404).json({
-                message: 'no recording found'
-            })
-        };
-        if (!song_id) {
-            return res.status(400).json({
-                message: 'song id missing'
-            })
-        }
-
-        let recording = {
-            song_id
-        }
-        if (version !== undefined) {
-            if (version.trim() === '') {
-                return res.status(400).json({
-                    message: 'version provided cannot be blank'
-                })
-            }
-            const newVersion = version.trim();
-
-            recording.version = newVersion
-        }
-        if (musicbrainz_id !== undefined) {
-            if (musicbrainz_id.trim() === '') {
-                recording.musicbrainz_id = null
-            } else { 
-                recording.musicbrainz_id = musicbrainz_id.trim();
-            }
-        }
-
-        const builtRecording = await record.update(
-            recording
-        )
-
-        res.status(200).json(builtRecording);
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        } else if (error instanceof UniqueConstraintError) {
-            return uniqueError(res, error);
-        }
-
-        serverError(res, error);
-    }
-});
-
-router.delete('/:id', async (req, res) => {
-    try {
-        const recordId = req.params.id;
-        const recording = await Recording.findByPk(recordId);
-
-        if (!recording) {
-            return res.status(404).json({
-                message: 'no recording found'
-            })
-        }
-
-        await recording.destroy();
-
-        res.status(200).json({
-            message: 'recording destroyed'
-        });
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        }
-
         serverError(res, error);
     }
 });

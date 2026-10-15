@@ -5,12 +5,13 @@
     "type": "module",
     "scripts": {
         "start": "node server.js",
+        "dev": "wrangler dev",
         "db:migrate": "sequelize-cli db:migrate",
         "db:migrate:undo": "sequelize-cli db:migrate:undo",
         "db:migrate:status": "sequelize-cli db:migrate:status"
     },
     "dependencies": {
-        "bcrypt": "^6.0.0",
+        "bcryptjs": "^3.0.3",
         "connect-pg-simple": "^10.0.0",
         "cors": "^2.8.6",
         "dotenv": "^17.4.2",
@@ -23,6 +24,7 @@
         "soundvault": "file:.."
     },
     "devDependencies": {
-        "sequelize-cli": "^6.6.5"
+        "sequelize-cli": "^6.6.5",
+        "wrangler": "^4.150.0"
     }
 }
