@@ -22,9 +22,9 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/artists', artistRoutes);
 router.use(requireAuth);
 
-router.use('/artists', artistRoutes);
 router.use('/songs', songRoutes);
 router.use('/recordings', recordingRoutes);
 router.use('/albums', albumRoutes);
