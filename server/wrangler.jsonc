@@ -23,7 +23,8 @@
 		{
 			"binding": "soundvaultpublic_db",
 			"database_name": "soundvaultpublic_db",
-			"database_id": "1bb5617c-7c9c-4fed-83ab-0fef206d7638"
+			"database_id": "1bb5617c-7c9c-4fed-83ab-0fef206d7638",
+			"migrations_dir": "db/migrations"
 		}
 	]
 }
