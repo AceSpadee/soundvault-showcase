@@ -23,10 +23,10 @@ router.get('/health', (req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/artists', artistRoutes);
-router.use(requireAuth);
-
 router.use('/songs', songRoutes);
 router.use('/recordings', recordingRoutes);
+router.use(requireAuth);
+
 router.use('/albums', albumRoutes);
 router.use('/releases', releaseRoutes);
 router.use('/release-tracks', releaseTrackRoutes);

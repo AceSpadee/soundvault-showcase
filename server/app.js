@@ -4,7 +4,6 @@ import cors from 'cors';
 import 'dotenv/config';
 import apiRouter from './routes/index.js';
 import './models/index.js';
-import sessionMiddleware from './config/session.js';
 
 const app = express();
 
@@ -20,8 +19,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-app.use(sessionMiddleware);
 
 app.use('/api/v1', apiRouter);
 
