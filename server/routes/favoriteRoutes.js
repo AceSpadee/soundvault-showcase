@@ -1,74 +1,83 @@
+import { env } from 'cloudflare:workers';
 import express from 'express';
-import Favorite from '../models/Favorite.js';
-import User from '../models/User.js';
-import Recording from '../models/Recording.js';
-import { ForeignKeyConstraintError } from 'sequelize';
-import { serverError, foreignKeyError } from '../helpers/errorHelpers.js';
-import requireAuth from '../middleware/requireAuth.js';
+import { serverError } from '../helpers/errorHelpers.js';
 
 const router = express.Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const favorite = await Favorite.findAll({
-            where: {
-                user_id: req.user.id
-            },
-            include: [
-                {
-                    model: User, 
-                    attributes: {
-                        exclude: ['password_hash']
-                    }
-                },
-                Recording
-            ]
-        });
+        const favorites = await env.soundvaultpublic_db
+            .prepare(`SELECT favorites.*,
+                recordings.id AS recording_id_alias,
+                recordings.song_id AS recording_song_id,
+                recordings.version AS recording_version,
+                recordings.musicbrainz_id AS recording_musicbrainz_id,
+                recordings.audio_url AS recording_audio_url,
+                recordings.duration AS recording_duration,
+                recordings.created_at AS recording_created_at,
+                recordings.updated_at AS recording_updated_at
+                FROM favorites 
+                JOIN recordings
+                ON favorites.recording_id = recordings.id
+                WHERE demo_session_id = ?`)
+            .bind(req.demoSessionId)
+            .all()
 
-        res.status(200).json(favorite);
+        const formattedFavorites = favorites.results.map((item) => {
+            const { recording_id_alias, 
+                recording_song_id, 
+                recording_version, 
+                recording_musicbrainz_id, 
+                recording_audio_url, 
+                recording_duration, 
+                recording_created_at,
+                recording_updated_at,
+                ...remainingFields
+            } = item
+
+            return {
+                ...remainingFields,
+                "Recording": {
+                    id: recording_id_alias,
+                    song_id: recording_song_id, 
+                    version: recording_version, 
+                    musicbrainz_id: recording_musicbrainz_id, 
+                    audio_url: recording_audio_url, 
+                    duration: recording_duration, 
+                    created_at: recording_created_at,
+                    updated_at: recording_updated_at,
+                }
+            }
+        })
+
+        res.status(200).json(formattedFavorites);
     } catch (error) {
         serverError(res, error);
     }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { recording_id } = req.body;
-        const user_id = req.user.id;
-        if (!user_id) {
-            return res.status(400).json({
-                message: 'missing user id'
-            })
-        } else if (!recording_id) {
+        const user_id = req.demoSessionId;
+        if (!recording_id) {
             return res.status(400).json({
                 message: 'missing recording id'
             })
-        }
-
-        let favorite = {}
-        
-        if (!/^[1-9]\d*$/.test(user_id)) {
-            return res.status(400).json({
-                message: 'invalid user id'
-            })
-        } else { 
-            favorite.user_id = user_id;
         }
 
         if (!/^[1-9]\d*$/.test(recording_id)) {
             return res.status(400).json({
                 message: 'invalid recording id'
             })
-        } else { 
-            favorite.recording_id = recording_id;
         }
 
-        const isFavorite = await Favorite.findOne({
-            where: {
-                user_id: user_id,
-                recording_id: recording_id
-            }
-        })
+        const isFavorite = await env.soundvaultpublic_db
+            .prepare(`SELECT * 
+                FROM favorites 
+                WHERE demo_session_id = ? AND recording_id = ?`)
+            .bind(user_id, recording_id)
+            .first()
 
         if (isFavorite) {
             return res.status(409).json({
@@ -76,36 +85,36 @@ router.post('/', requireAuth, async (req, res) => {
             })
         }
 
-        const createdFavorite = await Favorite.create(favorite);
+        const createdFavorite = await env.soundvaultpublic_db
+            .prepare('INSERT INTO favorites (demo_session_id, recording_id) VALUES (?, ?) RETURNING *')
+            .bind(user_id, recording_id)
+            .first()
 
         res.status(201).json(createdFavorite);
     } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        }
-
         serverError(res, error);
     }
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const favoriteId = req.params.id
-        const favorite = await Favorite.findOne({
-            where: {
-                id: favoriteId,
-                user_id: req.user.id
-            },
-            include: [
-                {
-                    model: User, 
-                    attributes: {
-                        exclude: ['password_hash']
-                    }
-                },
-                Recording
-            ]
-        });
+        const favorite = await env.soundvaultpublic_db
+            .prepare(`SELECT favorites.*, 
+                recordings.id AS recording_id_alias,
+                recordings.song_id AS recording_song_id,
+                recordings.version AS recording_version,
+                recordings.musicbrainz_id AS recording_musicbrainz_id,
+                recordings.audio_url AS recording_audio_url,
+                recordings.duration AS recording_duration,
+                recordings.created_at AS recording_created_at,
+                recordings.updated_at AS recording_updated_at
+                FROM favorites 
+                JOIN recordings
+                ON favorites.recording_id = recordings.id
+                WHERE favorites.id = ? AND favorites.demo_session_id = ?`)
+            .bind(favoriteId, req.demoSessionId)
+            .first()
 
         if (!favorite) {
             return res.status(404).json({
@@ -113,23 +122,46 @@ router.get('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        res.status(200).json(favorite);
+        const { recording_id_alias, 
+                recording_song_id, 
+                recording_version, 
+                recording_musicbrainz_id, 
+                recording_audio_url, 
+                recording_duration, 
+                recording_created_at,
+                recording_updated_at,
+                ...remainingFields
+            } = favorite
+
+        const formattedFavorite = {
+            ...remainingFields,
+            "Recording": {
+                id: recording_id_alias,
+                song_id: recording_song_id, 
+                version: recording_version, 
+                musicbrainz_id: recording_musicbrainz_id, 
+                audio_url: recording_audio_url, 
+                duration: recording_duration, 
+                created_at: recording_created_at,
+                updated_at: recording_updated_at,
+            }
+        }
+
+        res.status(200).json(formattedFavorite);
     } catch (error) {
         serverError(res, error);
     }
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const favoriteId = req.params.id
         const { recording_id } = req.body;
-        const user_id = req.user.id;
-        const foundFavorite = await Favorite.findOne({
-            where: {
-                id: favoriteId,
-                user_id: user_id
-            }
-        });
+        const user_id = req.demoSessionId;
+        const foundFavorite = await env.soundvaultpublic_db
+            .prepare('SELECT * FROM favorites WHERE id = ? AND demo_session_id = ?')
+            .bind(favoriteId, user_id)
+            .first()
 
         if (!foundFavorite) {
             return res.status(404).json({
@@ -137,40 +169,22 @@ router.put('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        if (!user_id) {
-            return res.status(400).json({
-                message: 'missing user id'
-            })
-        } else if (!recording_id) {
+        if (!recording_id) {
             return res.status(400).json({
                 message: 'missing recording id'
             })
-        }
-
-        let favorite = {}
-        
-        if (!/^[1-9]\d*$/.test(user_id)) {
-            return res.status(400).json({
-                message: 'invalid user id'
-            })
-        } else { 
-            favorite.user_id = user_id;
         }
 
         if (!/^[1-9]\d*$/.test(recording_id)) {
             return res.status(400).json({
                 message: 'invalid recording id'
             })
-        } else { 
-            favorite.recording_id = recording_id;
         }
 
-        const isFavorite = await Favorite.findOne({
-            where: {
-                user_id: user_id,
-                recording_id: recording_id
-            }
-        })
+        const isFavorite = await env.soundvaultpublic_db
+            .prepare('SELECT * FROM favorites WHERE demo_session_id = ? AND recording_id = ?')
+            .bind(user_id, recording_id)
+            .first()
 
         if (isFavorite && isFavorite.id !== foundFavorite.id) {
             return res.status(409).json({
@@ -178,28 +192,28 @@ router.put('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        const updatedFavorite = await foundFavorite.update(favorite);
+        const updatedFavorite = await env.soundvaultpublic_db
+            .prepare(`UPDATE favorites 
+                SET recording_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND demo_session_id = ?
+                RETURNING *`)
+            .bind(recording_id, favoriteId, user_id)
+            .first()
 
         res.status(200).json(updatedFavorite);
     } catch (error) {
-
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        }
         serverError(res, error);
     }
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const favoriteId = req.params.id
-        const userId = req.user.id
-        const favorite = await Favorite.findOne({
-            where: {
-                id: favoriteId,
-                user_id: userId
-            }
-        });
+        const user_id = req.demoSessionId
+        const favorite = await env.soundvaultpublic_db
+            .prepare(`SELECT * FROM favorites WHERE id = ? AND demo_session_id = ?`)
+            .bind(favoriteId, user_id)
+            .first();
 
         if (!favorite) {
             return res.status(404).json({
@@ -207,7 +221,10 @@ router.delete('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        await favorite.destroy();
+        await env.soundvaultpublic_db
+            .prepare('DELETE FROM favorites WHERE id = ? AND demo_session_id = ?')
+            .bind(favoriteId, user_id)
+            .run();
 
         res.status(200).json({
             message: 'favorite deleted'

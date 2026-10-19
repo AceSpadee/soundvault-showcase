@@ -7,7 +7,15 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const song = await env.soundvaultpublic_db
-            .prepare('SELECT songs.*, artists.id AS artist_id, artists.name AS artist_name, artists.musicbrainz_id AS artist_musicbrainz_id, artists.created_at AS artist_created_at, artists.updated_at AS artist_updated_at FROM songs JOIN artists ON songs.primary_artist_id = artists.id')
+            .prepare(`SELECT songs.*, 
+                artists.id AS artist_id, 
+                artists.name AS artist_name, 
+                artists.musicbrainz_id AS artist_musicbrainz_id, 
+                artists.created_at AS artist_created_at, 
+                artists.updated_at AS artist_updated_at 
+                FROM songs 
+                JOIN artists 
+                ON songs.primary_artist_id = artists.id`)
             .all();
 
         const formattedSongs = song.results.map((item) => {
@@ -36,7 +44,16 @@ router.get('/:id', async (req, res) => {
         const songId = req.params.id
 
         const song = await env.soundvaultpublic_db
-            .prepare('SELECT songs.*, artists.id AS artist_id, artists.name AS artist_name, artists.musicbrainz_id AS artist_musicbrainz_id, artists.created_at AS artist_created_at, artists.updated_at AS artist_updated_at FROM songs JOIN artists ON songs.primary_artist_id = artists.id WHERE songs.id = ?')
+            .prepare(`SELECT songs.*, 
+                artists.id AS artist_id, 
+                artists.name AS artist_name, 
+                artists.musicbrainz_id AS artist_musicbrainz_id, 
+                artists.created_at AS artist_created_at, 
+                artists.updated_at AS artist_updated_at 
+                FROM songs 
+                JOIN artists 
+                ON songs.primary_artist_id = artists.id 
+                WHERE songs.id = ?`)
             .bind(songId)
             .first();
 

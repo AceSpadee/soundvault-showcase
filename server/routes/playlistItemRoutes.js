@@ -1,49 +1,121 @@
+import { env } from 'cloudflare:workers';
 import express from 'express';
-import PlaylistItem from '../models/PlaylistItem.js';
-import Playlist from '../models/Playlist.js';
-import Recording from '../models/Recording.js';
-import { ForeignKeyConstraintError } from 'sequelize';
-import { serverError, foreignKeyError } from '../helpers/errorHelpers.js';
-import requireAuth from '../middleware/requireAuth.js';
-import Song from '../models/Song.js';
-import Artist from '../models/Artist.js';
+import { serverError } from '../helpers/errorHelpers.js';
 
 const router = express.Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const playlistItem = await PlaylistItem.findAll({
-            order: [['position', 'ASC']],
-            include: [
-                {
-                    model: Playlist,
-                    where: {
-                        user_id: req.user.id
-                    }, 
-                },
-                {
-                    model: Recording,
-                    include: [
-                        {
-                            model: Song,
-                            include: [
-                                {
-                                    model: Artist
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        });
+        const playlistItems = await env.soundvaultpublic_db
+            .prepare(`SELECT playlist_items.*,
+                playlists.id AS playlist_id_alias,
+                playlists.demo_session_id AS playlist_session_id,
+                playlists.name AS playlist_name,
+                playlists.created_at AS playlist_created_at,
+                playlists.updated_at AS playlist_updated_at,
+                recordings.id AS recording_id_alias,
+                recordings.song_id AS recording_song_id,
+                recordings.version AS recording_version,
+                recordings.musicbrainz_id AS recording_musicbrainz_id,
+                recordings.audio_url AS recording_audio_url,
+                recordings.duration AS recording_duration,
+                recordings.created_at AS recording_created_at,
+                recordings.updated_at AS recording_updated_at,
+                songs.id AS song_id_alias,
+                songs.title AS song_title,
+                songs.primary_artist_id AS song_primary_artist_id,
+                songs.created_at AS song_created_at,
+                songs.updated_at AS song_updated_at,
+                artists.id AS artist_id_alias,
+                artists.name AS artist_name,
+                artists.musicbrainz_id AS artist_musicbrainz_id,
+                artists.created_at AS artist_created_at,
+                artists.updated_at AS artist_updated_at
+                FROM playlist_items
+                JOIN playlists 
+                ON playlist_items.playlist_id = playlists.id
+                JOIN recordings
+                ON playlist_items.recording_id = recordings.id
+                JOIN songs
+                ON recordings.song_id = songs.id
+                JOIN artists
+                ON songs.primary_artist_id = artists.id
+                WHERE playlists.demo_session_id = ?
+                ORDER BY playlist_items.position ASC`)
+            .bind(req.demoSessionId)
+            .all()
 
-        res.status(200).json(playlistItem);
+        const formattedPlaylistItems = playlistItems.results.map((item) => {
+            const { 
+                playlist_id_alias, 
+                playlist_session_id, 
+                playlist_name, 
+                playlist_created_at, 
+                playlist_updated_at, 
+                recording_id_alias,
+                recording_song_id,
+                recording_version,
+                recording_musicbrainz_id,
+                recording_audio_url,
+                recording_duration,
+                recording_created_at,
+                recording_updated_at,
+                song_id_alias,
+                song_title,
+                song_primary_artist_id,
+                song_created_at,
+                song_updated_at,
+                artist_id_alias,
+                artist_name,
+                artist_musicbrainz_id,
+                artist_created_at,
+                artist_updated_at,
+                ...remainingFields 
+            } = item
+
+            return {
+                ...remainingFields,
+                "Playlist": {
+                    id: playlist_id_alias, 
+                    demo_session_id: playlist_session_id, 
+                    name: playlist_name, 
+                    created_at: playlist_created_at, 
+                    updated_at: playlist_updated_at
+                },
+                "Recording": {
+                    id: recording_id_alias,
+                    song_id: recording_song_id,
+                    version: recording_version,
+                    musicbrainz_id: recording_musicbrainz_id,
+                    audio_url: recording_audio_url,
+                    duration: recording_duration,
+                    created_at: recording_created_at, 
+                    updated_at: recording_updated_at,
+                    "Song": {
+                        id: song_id_alias,
+                        title: song_title,
+                        primary_artist_id: song_primary_artist_id,
+                        created_at: song_created_at,
+                        updated_at: song_updated_at,
+                        "Artist": {
+                            id: artist_id_alias,
+                            name: artist_name,
+                            musicbrainz_id: artist_musicbrainz_id,
+                            created_at: artist_created_at,
+                            updated_at: artist_updated_at
+                        }
+                    }
+                }
+            }
+        })
+
+        res.status(200).json(formattedPlaylistItems);
     } catch (error) {
         serverError(res, error);
     }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { playlist_id, recording_id, position } = req.body;
         if (!playlist_id) {
@@ -60,49 +132,39 @@ router.post('/', requireAuth, async (req, res) => {
             })
         }
 
-        let playlistItem = {}
-
         if (!/^[1-9]\d*$/.test(playlist_id)) {
             return res.status(400).json({
                 message: 'invalid playlist id'
             })
-        } else { 
-            playlistItem.playlist_id = playlist_id;
         }
 
         if (!/^[1-9]\d*$/.test(recording_id)) {
             return res.status(400).json({
                 message: 'invalid recording id'
             })
-        } else { 
-            playlistItem.recording_id = recording_id;
         }
 
         if (!/^[1-9]\d*$/.test(position)) {
             return res.status(400).json({
                 message: 'invalid position'
             })
-        } else { 
-            playlistItem.position = position;
         }
-        const positionCount = await PlaylistItem.count({
-            where: {
-                playlist_id: playlist_id
-            }
-        });
 
-        if (Number(position) !== positionCount + 1) {
+        const itemCount = await env.soundvaultpublic_db
+            .prepare('SELECT COUNT(*) AS itemCount FROM playlist_items WHERE playlist_id = ?')
+            .bind(playlist_id)
+            .first()
+
+        if (Number(position) !== itemCount.itemCount + 1) {
             return res.status(400).json({
                 message: 'invalid position'
             })
         }
 
-        const playlistExists = await Playlist.findOne({
-            where: {
-                id: playlist_id,
-                user_id: req.user.id
-            }
-        })
+        const playlistExists = await env.soundvaultpublic_db
+            .prepare('SELECT * FROM playlists WHERE id = ? AND demo_session_id = ?')
+            .bind(playlist_id, req.demoSessionId)
+            .first()
 
         if (!playlistExists) {
             return res.status(404).json({
@@ -110,60 +172,173 @@ router.post('/', requireAuth, async (req, res) => {
             })
         }
 
-        const createdPlaylistItem = await PlaylistItem.create(playlistItem);
+        const createdPlaylistItem = await env.soundvaultpublic_db
+            .prepare(`INSERT INTO playlist_items (playlist_id, recording_id, position) 
+                SELECT id, ?, ? 
+                FROM playlists 
+                WHERE id = ? AND demo_session_id = ?
+                AND ? = (
+                    SELECT COUNT(*) + 1
+                    FROM playlist_items
+                    WHERE playlist_id = playlists.id
+                )
+                RETURNING *`)
+            .bind(recording_id, position, playlist_id, req.demoSessionId, position)
+            .first()
 
-        const playlistItemData = await PlaylistItem.findOne({
-            where: { id: createdPlaylistItem.id },
-            include: [
-                {
-                    model: Playlist,
-                    where: {
-                        user_id: req.user.id
-                    }, 
-                },
-                {
-                    model: Recording,
-                    include: [
-                        {
-                            model: Song,
-                            include: [
-                                {
-                                    model: Artist
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        });
-
-        res.status(201).json(playlistItemData);
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
+        if (!createdPlaylistItem) {
+            return res.status(400).json({
+                message: "unable to add playlist item"
+            })
         }
 
+        const playlistItemData = await env.soundvaultpublic_db
+            .prepare(`SELECT playlist_items.*,
+                playlists.id AS playlist_id_alias,
+                playlists.demo_session_id AS playlist_session_id,
+                playlists.name AS playlist_name,
+                playlists.created_at AS playlist_created_at,
+                playlists.updated_at AS playlist_updated_at,
+                recordings.id AS recording_id_alias,
+                recordings.song_id AS recording_song_id,
+                recordings.version AS recording_version,
+                recordings.musicbrainz_id AS recording_musicbrainz_id,
+                recordings.audio_url AS recording_audio_url,
+                recordings.duration AS recording_duration,
+                recordings.created_at AS recording_created_at,
+                recordings.updated_at AS recording_updated_at,
+                songs.id AS song_id_alias,
+                songs.title AS song_title,
+                songs.primary_artist_id AS song_primary_artist_id,
+                songs.created_at AS song_created_at,
+                songs.updated_at AS song_updated_at,
+                artists.id AS artist_id_alias,
+                artists.name AS artist_name,
+                artists.musicbrainz_id AS artist_musicbrainz_id,
+                artists.created_at AS artist_created_at,
+                artists.updated_at AS artist_updated_at
+                FROM playlist_items
+                JOIN playlists
+                ON playlist_items.playlist_id = playlists.id
+                JOIN recordings
+                ON playlist_items.recording_id = recordings.id
+                JOIN songs
+                ON recordings.song_id = songs.id
+                JOIN artists
+                ON songs.primary_artist_id = artists.id
+                WHERE playlist_items.id = ?
+                AND playlists.demo_session_id = ?`)
+            .bind(createdPlaylistItem.id, req.demoSessionId)
+            .first()
+
+        const { 
+            playlist_id_alias, 
+            playlist_session_id, 
+            playlist_name, 
+            playlist_created_at, 
+            playlist_updated_at, 
+            recording_id_alias,
+            recording_song_id,
+            recording_version,
+            recording_musicbrainz_id,
+            recording_audio_url,
+            recording_duration,
+            recording_created_at,
+            recording_updated_at,
+            song_id_alias,
+            song_title,
+            song_primary_artist_id,
+            song_created_at,
+            song_updated_at,
+            artist_id_alias,
+            artist_name,
+            artist_musicbrainz_id,
+            artist_created_at,
+            artist_updated_at,
+            ...remainingFields 
+        } = playlistItemData
+
+        const formattedPlaylistItems = {
+            ...remainingFields,
+            "Playlist": {
+                id: playlist_id_alias, 
+                demo_session_id: playlist_session_id, 
+                name: playlist_name, 
+                created_at: playlist_created_at, 
+                updated_at: playlist_updated_at
+            },
+            "Recording": {
+                id: recording_id_alias,
+                song_id: recording_song_id,
+                version: recording_version,
+                musicbrainz_id: recording_musicbrainz_id,
+                audio_url: recording_audio_url,
+                duration: recording_duration,
+                created_at: recording_created_at, 
+                updated_at: recording_updated_at,
+                "Song": {
+                    id: song_id_alias,
+                    title: song_title,
+                    primary_artist_id: song_primary_artist_id,
+                    created_at: song_created_at,
+                    updated_at: song_updated_at,
+                    "Artist": {
+                        id: artist_id_alias,
+                        name: artist_name,
+                        musicbrainz_id: artist_musicbrainz_id,
+                        created_at: artist_created_at,
+                        updated_at: artist_updated_at
+                    }
+                }
+            }
+        }
+
+        res.status(201).json(formattedPlaylistItems);
+    } catch (error) {
         serverError(res, error);
     }
 });
 
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const playlistItemId = req.params.id
-        const playlistItem = await PlaylistItem.findOne({
-            where: {
-                id: playlistItemId
-            },
-            include: [
-                {
-                    model: Playlist,
-                    where: {
-                        user_id: req.user.id
-                    }
-                },
-                Recording
-            ]
-        });
+        const playlistItem = await env.soundvaultpublic_db
+            .prepare(`SELECT playlist_items.*,
+                playlists.id AS playlist_id_alias,
+                playlists.demo_session_id AS playlist_session_id,
+                playlists.name AS playlist_name,
+                playlists.created_at AS playlist_created_at,
+                playlists.updated_at AS playlist_updated_at,
+                recordings.id AS recording_id_alias,
+                recordings.song_id AS recording_song_id,
+                recordings.version AS recording_version,
+                recordings.musicbrainz_id AS recording_musicbrainz_id,
+                recordings.audio_url AS recording_audio_url,
+                recordings.duration AS recording_duration,
+                recordings.created_at AS recording_created_at,
+                recordings.updated_at AS recording_updated_at,
+                songs.id AS song_id_alias,
+                songs.title AS song_title,
+                songs.primary_artist_id AS song_primary_artist_id,
+                songs.created_at AS song_created_at,
+                songs.updated_at AS song_updated_at,
+                artists.id AS artist_id_alias,
+                artists.name AS artist_name,
+                artists.musicbrainz_id AS artist_musicbrainz_id,
+                artists.created_at AS artist_created_at,
+                artists.updated_at AS artist_updated_at
+                FROM playlist_items
+                JOIN playlists
+                ON playlist_items.playlist_id = playlists.id
+                JOIN recordings
+                ON playlist_items.recording_id = recordings.id
+                JOIN songs
+                ON recordings.song_id = songs.id
+                JOIN artists
+                ON songs.primary_artist_id = artists.id
+                WHERE playlist_items.id = ? AND playlists.demo_session_id = ?`)
+            .bind(playlistItemId, req.demoSessionId)
+            .first()
 
         if (!playlistItem) {
             return res.status(404).json({
@@ -171,28 +346,85 @@ router.get('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        res.status(200).json(playlistItem);
+        const { 
+            playlist_id_alias, 
+            playlist_session_id, 
+            playlist_name, 
+            playlist_created_at, 
+            playlist_updated_at, 
+            recording_id_alias,
+            recording_song_id,
+            recording_version,
+            recording_musicbrainz_id,
+            recording_audio_url,
+            recording_duration,
+            recording_created_at,
+            recording_updated_at,
+            song_id_alias,
+            song_title,
+            song_primary_artist_id,
+            song_created_at,
+            song_updated_at,
+            artist_id_alias,
+            artist_name,
+            artist_musicbrainz_id,
+            artist_created_at,
+            artist_updated_at,
+            ...remainingFields 
+        } = playlistItem
+
+        const formattedPlaylistItems = {
+            ...remainingFields,
+            "Playlist": {
+                id: playlist_id_alias, 
+                demo_session_id: playlist_session_id, 
+                name: playlist_name, 
+                created_at: playlist_created_at, 
+                updated_at: playlist_updated_at
+            },
+            "Recording": {
+                id: recording_id_alias,
+                song_id: recording_song_id,
+                version: recording_version,
+                musicbrainz_id: recording_musicbrainz_id,
+                audio_url: recording_audio_url,
+                duration: recording_duration,
+                created_at: recording_created_at, 
+                updated_at: recording_updated_at,
+                "Song": {
+                    id: song_id_alias,
+                    title: song_title,
+                    primary_artist_id: song_primary_artist_id,
+                    created_at: song_created_at,
+                    updated_at: song_updated_at,
+                    "Artist": {
+                        id: artist_id_alias,
+                        name: artist_name,
+                        musicbrainz_id: artist_musicbrainz_id,
+                        created_at: artist_created_at,
+                        updated_at: artist_updated_at
+                    }
+                }
+            }
+        }
+
+        res.status(200).json(formattedPlaylistItems);
     } catch (error) {
         serverError(res, error);
     }
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
-        const playlistItemId = req.params.id
-        const foundPlaylistItem = await PlaylistItem.findOne({
-            where: {
-                id: playlistItemId,
-            },
-            include: [
-                {
-                    model: Playlist,
-                    where: {
-                        user_id: req.user.id
-                    }
-                }
-            ]
-        });
+        const playlistItemId = req.params.id;
+        const foundPlaylistItem = await env.soundvaultpublic_db
+            .prepare(`SELECT playlist_items.*
+                FROM playlist_items
+                JOIN playlists
+                ON playlist_items.playlist_id = playlists.id
+                WHERE playlist_items.id = ? AND playlists.demo_session_id = ?`)
+            .bind(playlistItemId, req.demoSessionId)
+            .first()
 
         if (!foundPlaylistItem) {
             return res.status(404).json({
@@ -215,8 +447,6 @@ router.put('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        let playlistItem = {}
-
         if (!/^[1-9]\d*$/.test(playlist_id)) {
             return res.status(400).json({
                 message: 'invalid playlist id'
@@ -232,31 +462,27 @@ router.put('/:id', requireAuth, async (req, res) => {
             return res.status(400).json({
                 message: 'invalid recording id'
             })
-        } else { 
-            playlistItem.recording_id = recording_id;
         }
-        const positionCount = await PlaylistItem.count({
-            where: {
-                playlist_id: foundPlaylistItem.playlist_id
-            }
-        });
+
+        const positionCount = await env.soundvaultpublic_db
+            .prepare(`SELECT COUNT(*) AS itemCount FROM playlist_items WHERE playlist_id = ?`)
+            .bind(playlist_id)
+            .first()
 
         if (!/^[1-9]\d*$/.test(position)) {
             return res.status(400).json({
                 message: 'invalid position'
             })
-        } else if (position > positionCount) {
+        } else if (Number(position) > positionCount.itemCount) {
             return res.status(400).json({
                 message: 'invalid position number'
             })
         }
 
-        const playlistExists = await Playlist.findOne({
-            where: {
-                id: foundPlaylistItem.playlist_id,
-                user_id: req.user.id
-            }
-        })
+        const playlistExists = await env.soundvaultpublic_db
+            .prepare('SELECT * FROM playlists WHERE id = ? AND demo_session_id = ?')
+            .bind(playlist_id, req.demoSessionId)
+            .first()
 
         if (!playlistExists) {
             return res.status(404).json({
@@ -264,49 +490,50 @@ router.put('/:id', requireAuth, async (req, res) => {
             })
         }
         
-        const isPlaylistItemPosition = await PlaylistItem.findOne({
-            where: {
-                playlist_id: foundPlaylistItem.playlist_id,
-                position: position
-            }
-        })
+        const isPlaylistItemPosition = await env.soundvaultpublic_db
+            .prepare('SELECT * FROM playlist_items WHERE playlist_id = ? AND position = ?')
+            .bind(playlist_id, position)
+            .first()
 
         const oldPosition = foundPlaylistItem.position
 
-        if (isPlaylistItemPosition) {
-            await isPlaylistItemPosition.update({position: oldPosition})
+        const statements = [];
+
+        if (isPlaylistItemPosition && isPlaylistItemPosition.id !== foundPlaylistItem.id) {
+            const first = await env.soundvaultpublic_db
+                .prepare(`UPDATE playlist_items SET position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND playlist_id = ?`)
+                .bind(oldPosition, isPlaylistItemPosition.id, playlist_id)
+
+            statements.push(first)
         }
-        playlistItem.position = position;
 
-        const updatedPlaylistItem = await foundPlaylistItem.update(playlistItem);
+        const updatedPlaylistItem = await env.soundvaultpublic_db
+            .prepare(`UPDATE playlist_items 
+                SET position = ?, recording_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND playlist_id = ?
+                RETURNING *`)
+            .bind(position, recording_id, foundPlaylistItem.id, playlist_id)
+        statements.push(updatedPlaylistItem)
 
-        res.status(200).json(updatedPlaylistItem);
+        const results = await env.soundvaultpublic_db.batch(statements);
+
+        res.status(200).json(results.at(-1).results[0]);
     } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
-            return foreignKeyError(res);
-        }
-
         serverError(res, error);
     }
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const playlistItemId = req.params.id
-        const playlistItem = await PlaylistItem.findOne({
-            where: {
-                id: playlistItemId
-            },
-            include: [
-                {
-                    model: Playlist,
-                    where: {
-                        user_id: req.user.id
-                    }, 
-                },
-                Recording
-            ]
-        });
+        const playlistItem = await env.soundvaultpublic_db
+            .prepare(`SELECT playlist_items.*
+                FROM playlist_items
+                JOIN playlists
+                ON playlist_items.playlist_id = playlists.id
+                WHERE playlist_items.id = ? AND playlists.demo_session_id = ?`)
+            .bind(playlistItemId, req.demoSessionId)
+            .first()
 
         if (!playlistItem) {
             return res.status(404).json({
@@ -314,22 +541,34 @@ router.delete('/:id', requireAuth, async (req, res) => {
             })
         }
 
-        await playlistItem.destroy();
+        const remainingPlaylistItems = await env.soundvaultpublic_db
+            .prepare(`SELECT * FROM playlist_items WHERE playlist_id = ? ORDER BY position ASC`)
+            .bind(playlistItem.playlist_id)
+            .all()
 
-        const remainingPlaylistItems = await PlaylistItem.findAll({
-            where: {
-                playlist_id: playlistItem.playlist_id
-            },
-            order: [['position', 'ASC']]
-        })
+        const statements = []
+
+        const first = await env.soundvaultpublic_db
+            .prepare('DELETE FROM playlist_items WHERE id = ? AND playlist_id = ?')
+            .bind(playlistItemId, playlistItem.playlist_id)
+        statements.push(first)
 
         let count = 1
-        for (const item of remainingPlaylistItems) {
-            await item.update({
-                position: count
-            });
+        for (const item of remainingPlaylistItems.results) {
+            if (item.id === playlistItem.id) {
+                continue;
+            }
+
+            const second = await env.soundvaultpublic_db
+                .prepare(`UPDATE playlist_items 
+                    SET position = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = ? AND playlist_id = ?`)
+                .bind(count, item.id, playlistItem.playlist_id)
+                statements.push(second)
             count++
         }
+
+        await env.soundvaultpublic_db.batch(statements);
 
         res.status(200).json({
             message: 'playlist item deleted'
