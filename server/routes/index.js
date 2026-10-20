@@ -7,6 +7,7 @@ import playlistItemRoutes from './playlistItemRoutes.js';
 import favoriteRoutes from './favoriteRoutes.js';
 import listeningEventRoutes from './listeningEventRoutes.js';
 import demoSession from '../middleware/demoSession.js';
+import demoRoutes from './demoRoutes.js';
 const router = express.Router();
 
 router.get('/health', (req, res) => {
@@ -21,7 +22,7 @@ router.use('/songs', songRoutes);
 router.use('/recordings', recordingRoutes);
 
 router.use(demoSession);
-
+router.use('/demo', demoRoutes);
 router.use('/playlists', playlistRoutes);
 router.use('/playlist-items', playlistItemRoutes);
 router.use('/favorites', favoriteRoutes);

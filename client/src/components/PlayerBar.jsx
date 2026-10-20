@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
+export default function PlayerBar({ title, audioUrl, onEnded, autoPlay }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -11,7 +11,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
 
     useEffect(() => {
         resetPlayback();
-        if (recordingId && autoPlay) {
+        if (audioUrl && autoPlay) {
             handleAutoPlay();
         }
     
@@ -22,7 +22,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
                 handleAudioError();
             }
         }
-    }, [recordingId, autoPlay]);
+    }, [audioUrl, autoPlay]);
 
     function resetPlayback() {
         if (audioRef.current) {
@@ -94,7 +94,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
             <button 
                 type="button"
                 className="player-toggle"
-                disabled={!recordingId}
+                disabled={!audioUrl}
                 onClick={handlePlayPause}
                 aria-pressed={isPlaying} aria-label={isPlaying ? 'Pause recording' : 'Play recording'}
             >
@@ -103,7 +103,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
 
             <audio 
                 ref={audioRef}
-                src={recordingId ? `/api/v1/recordings/${recordingId}/stream` : undefined}
+                src={audioUrl || undefined}
                 preload="metadata"
                 onEnded={handleRecordingEnd}
                 onLoadedMetadata={() => setDuration(audioRef.current.duration)}
@@ -116,7 +116,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
             <input 
                 className="player-seek" 
                 aria-label="Seek" 
-                disabled={!recordingId || duration === 0} 
+                disabled={!audioUrl || duration === 0} 
                 type="range" min="0" max={duration} 
                 value={currentTime} 
                 onChange={(event) => handleSeek(event)} 
@@ -124,7 +124,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
             <input 
                 className="player-volume" 
                 aria-label="Volume" 
-                disabled={!recordingId} 
+                disabled={!audioUrl} 
                 type="range" min="0" max="1" step="0.01" 
                 value={volume} 
                 onChange={(event) => handleVolumeChange(event)} 
@@ -133,7 +133,7 @@ export default function PlayerBar({ title, recordingId, onEnded, autoPlay }) {
             <button 
                 type="button"
                 className="player-mute"
-                disabled={!recordingId}
+                disabled={!audioUrl}
                 onClick={handleMute}
                 aria-pressed={isMuted} aria-label={isMuted ? 'Unmute recording' : 'Mute recording'}
             >

@@ -1,6 +1,6 @@
 {
 	// The unique name of your Cloudflare Worker
-	"name": "my-cloudflare-worker",
+	"name": "soundvault-showcase-api",
 	// The entry point file for your application
 	"main": "worker.js",
 	// The date defining the runtime compatibility behavior

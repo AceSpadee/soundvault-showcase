@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
-import Login from './components/Login.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import './App.css';
 
 export default function App() {
-    const [user, setUser] = useState(null);
-    const [isUserLoading, setIsUserLoading] = useState(true);
-    const [logoutError, setLogoutError] = useState('');
     const [recordings, setRecordings] = useState([]);
     const [isRecordingsLoading, setIsRecordingsLoading] = useState(false);
     const [recordingsError, setRecordingsError] = useState('');
@@ -26,54 +22,9 @@ export default function App() {
     const [playlistItemsError, setPlaylistItemsError] = useState('');
     const [isFavoritesLoading, setIsFavoritesLoading] = useState(false);
     const [favoritesError, setFavoritesError] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
 
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                setIsUserLoading(true);
-                const response = await fetch('/api/v1/auth/me', {
-                    credentials: 'include', 
-                });
-                
-                if (!response.ok) {
-                    setUser(null);
-                    return;
-                }
-
-                const userData = await response.json();
-                setUser(userData);
-            } catch {
-                setUser(null)
-            } finally {
-                setIsUserLoading(false);
-            }
-        };
-
-        fetchUser();
-    }, []);
-
-    useEffect(() => {
-        if (!user) {
-            setRecordings([]);
-            setIsRecordingsLoading(false);
-            setRecordingsError('');
-            setSelectedRecording(null);
-            setFavorites([]);
-            setPlaylists([]);
-            setSelectedPlaylist(null);
-            setPlaylistItems([]);
-            setPlaybackQueue([]);
-            setAutoPlay(false);
-            setEditPlaylistName('');
-            setEditPlaylistId(null);
-            setIsPlaylistsLoading(false);
-            setPlaylistsError('');
-            setIsPlaylistItemsLoading(false);
-            setPlaylistItemsError('');
-            setIsFavoritesLoading(false);
-            setFavoritesError('');
-            return;
-        }
         const fetchRecordings = async () => {
             try {
                 setIsRecordingsLoading(true);
@@ -100,13 +51,9 @@ export default function App() {
         };
 
         fetchRecordings();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
-
         const fetchFavorites = async () => {
             try {
                 setIsFavoritesLoading(true);
@@ -131,13 +78,9 @@ export default function App() {
         };
 
         fetchFavorites();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
-
         const fetchPlaylists = async () => {
             try {
                 setIsPlaylistsLoading(true);
@@ -162,7 +105,7 @@ export default function App() {
         };
 
         fetchPlaylists();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         if (!selectedPlaylist) {
@@ -199,25 +142,6 @@ export default function App() {
 
         fetchPlaylistItems();
     }, [selectedPlaylist]);
-
-    async function handleLogout() {
-        try {
-            setLogoutError('')
-            const response = await fetch('/api/v1/auth/logout', {
-                method: 'POST',
-                credentials: 'include',
-            });
-            
-            if (!response.ok) {
-                setLogoutError('Unable to log out. Please try again.');
-                return;
-            }
-
-            setUser(null);
-        } catch (error) {
-            setLogoutError(error.message);
-        }
-    };
     
     function formatRecordingTitle(recording) {
         if (recording.version === 'Original') {
@@ -521,6 +445,38 @@ export default function App() {
         setPlaybackQueue([])
     };
 
+    async function handleResetDemo() {
+        try {
+            setIsResetting(true);
+            const response = await fetch('/api/v1/demo/reset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                console.log('failed fetch')
+                return
+            };
+
+            console.log('success');
+            setPlaylists([]);
+            setSelectedPlaylist(null);
+            setPlaylistItems([]);
+            setFavorites([]);
+            setPlaybackQueue([]);
+            setSelectedRecording(null);
+            setAutoPlay(false);
+        } catch {
+            console.log('failed fetch');
+            return
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
     let libraryContent;
     if (isRecordingsLoading) {
         libraryContent = <p className="library-message">Loading your library...</p>;
@@ -656,71 +612,70 @@ export default function App() {
         </div>
     };
 
-    let userContent;
-    if (isUserLoading) {
-        userContent = <p className="library-message">Loading...</p>
-    } else if (!user) {
-        userContent = <Login onLogin={setUser} />
-    } else {
-        userContent = <div className="app-layout">
-            <header className="app-header">SoundVault</header>
-            <aside className="app-sidebar">
-                <nav>
-                    <ul>
-                        <li><a>Home</a></li>
-                        <li><a>Search</a></li>
-                        <li><a>Library</a></li>
-                    </ul>
-                </nav>
-            </aside>
+    let userContent = <div className="app-layout">
+        <header className="app-header">SoundVault</header>
+        <aside className="app-sidebar">
+            <nav>
+                <ul>
+                    <li><a>Home</a></li>
+                    <li><a>Search</a></li>
+                    <li><a>Library</a></li>
+                </ul>
+            </nav>
+        </aside>
 
-            <main className="app-main">
-                <div className="main-toolbar">
-                    <h1>Welcome, {user.username}!</h1>
-                    <button type="button" className="logout-button" onClick={handleLogout}>Log Out</button>
-                </div>
+        <main className="app-main">
+            <div className="main-toolbar">
+                <h1>Welcome to SoundVault!</h1>
+                <button 
+                    type='button' 
+                    className='reset-demo-button' 
+                    onClick={handleResetDemo} 
+                    disabled={isResetting}
+                >
+                    {isResetting ? 'Resetting...' : 'Reset demo'}
+                </button>
+            </div>
 
-                <section className="library-preview">
-                    <h2>Your Library
-                        {recordingCount}
-                    </h2>
-                    {libraryContent}
-                    {favoritesContent}
-                </section>
+            <section className="library-preview">
+                <h2>Your Library
+                    {recordingCount}
+                </h2>
+                {libraryContent}
+                {favoritesContent}
+            </section>
 
-                <section>
-                    <h2>Your Playlists</h2>
-                    <input 
-                        type="text" 
-                        value={newPlaylistName} 
-                        onChange={(event) => setNewPlaylistName(event.target.value)}
-                    />
-                    <button type="button" onClick={handleCreatePlaylist}>Create Playlist</button>
+            <section>
+                <h2>Your Playlists</h2>
+                <input 
+                    type="text" 
+                    value={newPlaylistName} 
+                    onChange={(event) => setNewPlaylistName(event.target.value)}
+                />
+                <button type="button" onClick={handleCreatePlaylist}>Create Playlist</button>
 
-                    {playlistsContent}
-                </section>
+                {playlistsContent}
+            </section>
 
-                {selectedPlaylistContent}
+            {selectedPlaylistContent}
 
-                <h2>Queue</h2>
-                <button type="button" onClick={handleClearQueue}>Clear queue</button>
-                {queueContent}
+            <h2>Queue</h2>
+            <button type="button" onClick={handleClearQueue}>Clear queue</button>
+            {queueContent}
 
-            </main>
-            
-            <PlayerBar 
-                title={selectedRecording ? formatRecordingTitle(selectedRecording) : null} 
-                recordingId={selectedRecording ? selectedRecording.id : null}
-                onEnded={handlePlaylistItemEnded}
-                autoPlay={autoPlay}
-            />
-        </div>
-    };
+        </main>
+        
+        <PlayerBar 
+            title={selectedRecording ? formatRecordingTitle(selectedRecording) : null} 
+            audioUrl={selectedRecording?.audio_url || null}
+            onEnded={handlePlaylistItemEnded}
+            autoPlay={autoPlay}
+        />
+    </div>
 
     return (
         <div>
             {userContent}
-            {logoutError && <p className="library-error">{logoutError}</p>}
         </div>
     )
 };
