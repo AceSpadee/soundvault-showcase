@@ -9,6 +9,12 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"vars": {
+		"CLIENT_ORIGIN": "https://soundvault-showcase.pages.dev"
+	},
+	"triggers": {
+		"crons": ["0 3 * * *"]
+	},
 	"d1_databases": [
 		{
 			"binding": "soundvaultpublic_db",

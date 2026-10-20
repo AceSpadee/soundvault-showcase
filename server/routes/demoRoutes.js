@@ -21,6 +21,6 @@ router.post('/reset', async (req, res) => {
     } catch (error) {
         serverError(res, error);
     }
-})
+});
 
 export default router;
