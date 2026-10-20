@@ -8,6 +8,8 @@ import favoriteRoutes from './favoriteRoutes.js';
 import listeningEventRoutes from './listeningEventRoutes.js';
 import demoSession from '../middleware/demoSession.js';
 import demoRoutes from './demoRoutes.js';
+import { demoRateLimiter } from '../middleware/demoRateLimiter.js';
+
 const router = express.Router();
 
 router.get('/health', (req, res) => {
@@ -22,6 +24,17 @@ router.use('/songs', songRoutes);
 router.use('/recordings', recordingRoutes);
 
 router.use(demoSession);
+
+router.use((req, res, next) => {
+    const mutationMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+    if (mutationMethods.includes(req.method)) {
+        demoRateLimiter(req, res, next)
+    } else {
+        next()
+    }
+});
+
 router.use('/demo', demoRoutes);
 router.use('/playlists', playlistRoutes);
 router.use('/playlist-items', playlistItemRoutes);
