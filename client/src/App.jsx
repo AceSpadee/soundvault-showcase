@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import PlayerBar from './components/PlayerBar.jsx';
+import MusicCredits from './components/MusicCredits.jsx';
 import './App.css';
 
 export default function App() {
@@ -662,6 +663,8 @@ export default function App() {
             <h2>Queue</h2>
             <button type="button" onClick={handleClearQueue}>Clear queue</button>
             {queueContent}
+
+            <MusicCredits />
 
         </main>
         

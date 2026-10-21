@@ -182,6 +182,42 @@ body {
     background-color: #8B5CF6;
 }
 
+.music-credits {
+    margin-top: 32px;
+    padding: 20px;
+    background-color: #292142;
+    border-radius: 12px;
+}
+
+.music-credits h2 {
+    margin: 0 0 16px;
+    font-size: 22px;
+}
+
+.music-credits p {
+    color: #B6ACCD;
+    line-height: 1.6;
+}
+
+.music-credits a {
+    color: #C4B5FD;
+    text-decoration: underline;
+}
+
+.music-credits ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.music-credits li {
+    color: #F4F0FF;
+    font-size: 14px;
+}
+
 .player-bar {
     background-color: #292142;
     color: #F4F0FF;
