@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PlayerBar from './components/PlayerBar.jsx';
 import MusicCredits from './components/MusicCredits.jsx';
+import DemoInfo from './components/DemoInfo.jsx';
 import './App.css';
 
 export default function App() {
@@ -637,6 +638,8 @@ export default function App() {
                     {isResetting ? 'Resetting...' : 'Reset demo'}
                 </button>
             </div>
+
+            <DemoInfo />
 
             <section className="library-preview">
                 <h2>Your Library

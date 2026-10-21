@@ -96,6 +96,23 @@ body {
     background-color: #A78BFA;
 }
 
+.demo-info {
+    margin-top: 24px;
+    padding: 20px;
+    background-color: #292142;
+    border-radius: 12px;
+}
+
+.demo-info h2 {
+    margin: 0 0 16px;
+    font-size: 22px;
+}
+
+.demo-info p {
+    color: #B6ACCD;
+    line-height: 1.6;
+}
+
 .library-preview {
     margin-top: 32px;
 }
