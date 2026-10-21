@@ -6,18 +6,4 @@ function serverError(res, error) {
     })
 };
 
-function uniqueError(res, error) {
-    console.error('Duplicate entry detected:', error.fields);
-
-    return res.status(409).json({
-        message: 'A record with this information already exists.'
-    });
-};
-
-function foreignKeyError(res) {
-    return res.status(400).json({
-        message: "foreign key error"
-    })
-}
-
-export { serverError, uniqueError, foreignKeyError };
+export { serverError };

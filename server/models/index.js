@@ -6,14 +6,10 @@ import Album from "./Album.js";
 import Release from "./Release.js";
 import ReleaseTrack from "./ReleaseTrack.js";
 import RecordingArtist from "./RecordingArtist.js";
-import User from "./User.js";
 import Playlist from "./Playlist.js";
 import PlaylistItem from "./PlaylistItem.js";
 import Favorite from "./Favorite.js";
 import ListeningEvent from "./ListeningEvent.js";
-import LibraryRoot from "./LibraryRoot.js";
-import ScanRun from "./ScanRun.js";
-import MetadataMatch from "./MetadataMatch.js";
 
 Artist.hasMany(Song, {
     foreignKey: 'primary_artist_id'
@@ -100,13 +96,6 @@ RecordingArtist.belongsTo(Artist, {
     foreignKey: 'artist_id',
 });
 
-User.hasMany(Playlist, {
-    foreignKey: 'user_id',
-}); 
-Playlist.belongsTo(User, {
-    foreignKey: 'user_id',
-});
-
 Playlist.hasMany(PlaylistItem, {
     foreignKey: 'playlist_id',
 }); 
@@ -121,25 +110,11 @@ PlaylistItem.belongsTo(Recording, {
     foreignKey: 'recording_id',
 });
 
-User.hasMany(Favorite, {
-    foreignKey: 'user_id',
-});
-Favorite.belongsTo(User, {
-    foreignKey: 'user_id',
-});
-
 Recording.hasMany(Favorite, {
     foreignKey: 'recording_id',
 });
 Favorite.belongsTo(Recording, {
     foreignKey: 'recording_id',
-});
-
-User.hasMany(ListeningEvent, {
-    foreignKey: 'user_id',
-});
-ListeningEvent.belongsTo(User, {
-    foreignKey: 'user_id',
 });
 
 Recording.hasMany(ListeningEvent, {
@@ -156,20 +131,6 @@ ListeningEvent.belongsTo(AudioFile, {
     foreignKey: 'audio_file_id',
 });
 
-LibraryRoot.hasMany(ScanRun, {
-    foreignKey: 'library_root_id',
-});
-ScanRun.belongsTo(LibraryRoot, {
-    foreignKey: 'library_root_id',
-});
-
-AudioFile.hasMany(MetadataMatch, {
-    foreignKey: 'audio_file_id',
-});
-MetadataMatch.belongsTo(AudioFile, {
-    foreignKey: 'audio_file_id',
-});
-
 export { 
     Artist, 
     Song, 
@@ -179,12 +140,8 @@ export {
     Release, 
     ReleaseTrack, 
     RecordingArtist, 
-    User, 
     Playlist, 
     PlaylistItem, 
     Favorite, 
-    ListeningEvent,
-    LibraryRoot,
-    ScanRun,
-    MetadataMatch
+    ListeningEvent
 };
