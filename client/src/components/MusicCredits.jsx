@@ -6,7 +6,6 @@ export default function MusicCredits() {
             <li>Morning</li>
             <li>Ether Disco</li>
             <li>Happy Alley</li>
-            <li>Summer Day</li>
             <li>Mesmerizing Galaxy Loop</li>
         </ul>
         <p>

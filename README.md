@@ -12,7 +12,7 @@ Visitors can explore the application without creating an account.
 
 ## Demo Features
 
-- Browse a music library containing five playable recordings.
+- Browse a music library containing four playable recordings.
 - Stream real audio files with playback controls.
 - Manage a playback queue.
 - Favorite and unfavorite recordings.
@@ -24,7 +24,7 @@ Visitors can explore the application without creating an account.
 - Automatically expire demo sessions after seven days.
 - Access music attribution and licensing information.
 
-The demo includes five recordings by Kevin MacLeod, licensed under Creative Commons Attribution 4.0.
+The demo includes four recordings by Kevin MacLeod, licensed under Creative Commons Attribution 4.0.
 
 ## Technology Stack
 
@@ -134,10 +134,9 @@ Tracks included:
 - Morning
 - Ether Disco
 - Happy Alley
-- Summer Day
 - Mesmerizing Galaxy Loop
 
-All five recordings are licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+All four recordings are licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The original audio recordings have not been modified.
 
